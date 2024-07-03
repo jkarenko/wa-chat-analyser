@@ -1,0 +1,12 @@
+# Virtual environment
+.envrc
+
+# Python-specific ignores
+__pycache__/
+*.pyc
+
+# Dependency files
+poetry.lock
+
+# General ignores
+.DS_Store

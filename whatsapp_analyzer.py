@@ -50,42 +50,57 @@ def process_ocr_result(ocr_result, participant_names):
             continue
         
         if conf < 80 and conf >= 60:
-            with open('user-words-finnish.txt', 'r', encoding='utf-8') as f:
-                user_words = [word.strip() for word in f.readlines()]
-            from difflib import SequenceMatcher
-            def optical_similarity(a, b):
-                return SequenceMatcher(None, a.lower(), b.lower()).ratio()
-            closest_match = max(user_words, key=lambda word: optical_similarity(word, text))
-            similarity = optical_similarity(closest_match, text)
-            if similarity >= 0.5:  # Adjust this threshold as needed
-                print(f"Low confidence word '{text}' (conf: {conf}). Closest optical match: '{closest_match}' (similarity: {similarity:.2f})")
-                text = closest_match
+            text = handle_low_confidence_word(text, conf)
             
         if conf < 60:
-            if  re.match(r'^\W+$', text):
-                print(f"Skipping low confidence garbage text: '{text}', confidence: {conf}, left: {left}")
-                continue
-            if conf < 30:
-                print(f"Skipping low confidence text: '{text}', confidence: {conf}, left: {left}")
-                continue
-            if left > 1000:
-                print(f"Skipping low confidence text near right edge: '{text}', confidence: {conf}, left: {left}")
+            if should_skip_text(text, conf, left):
                 continue
             print(f"Warning: Low confidence text: '{text}', confidence: {conf}, left: {left}")
 
         if not current_participant:
-            participant_index = 0 if left < left_threshold else 1
-            current_participant = participant_names[participant_index] if participant_names else f"Participant {'A' if participant_index == 0 else 'B'}"
+            current_participant = determine_participant(left, left_threshold, participant_names)
 
         if text:
-            if current_message and not current_message.endswith(' '):
-                current_message += ' '
-            current_message += text
-
+            current_message = append_to_message(current_message, text)
+    
     # Add the last message
     add_message()
 
     return processed_messages
+
+def handle_low_confidence_word(text, conf):
+    with open('user-words-finnish.txt', 'r', encoding='utf-8') as f:
+        user_words = [word.strip() for word in f.readlines()]
+    from difflib import SequenceMatcher
+    def optical_similarity(a, b):
+        return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+    closest_match = max(user_words, key=lambda word: optical_similarity(word, text))
+    similarity = optical_similarity(closest_match, text)
+    if similarity >= 0.5:  # Adjust this threshold as needed
+        print(f"Low confidence word '{text}' (conf: {conf}). Closest optical match: '{closest_match}' (similarity: {similarity:.2f})")
+        return closest_match
+    return text
+
+def should_skip_text(text, conf, left):
+    if re.match(r'^\W+$', text):
+        print(f"Skipping low confidence garbage text: '{text}', confidence: {conf}, left: {left}")
+        return True
+    if conf < 30:
+        print(f"Skipping low confidence text: '{text}', confidence: {conf}, left: {left}")
+        return True
+    if left > 1000:
+        print(f"Skipping low confidence text near right edge: '{text}', confidence: {conf}, left: {left}")
+        return True
+    return False
+
+def determine_participant(left, left_threshold, participant_names):
+    participant_index = 0 if left < left_threshold else 1
+    return participant_names[participant_index] if participant_names else f"Participant {'A' if participant_index == 0 else 'B'}"
+
+def append_to_message(current_message, text):
+    if current_message and not current_message.endswith(' '):
+        current_message += ' '
+    return current_message + text
 
 def format_conversation(processed_messages):
     """Format the processed messages into the desired output format."""

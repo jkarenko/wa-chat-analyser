@@ -3,6 +3,7 @@ from PIL import Image
 import pytesseract
 import pandas as pd
 import re
+import glob
 
 def perform_ocr(image_path):
     """Perform OCR on the given image."""
@@ -15,7 +16,7 @@ def perform_ocr(image_path):
         df = pd.DataFrame(ocr_result)
         return df
     except Exception as e:
-        print(f"Error performing OCR: {e}")
+        print(f"Error performing OCR on {image_path}: {e}")
         return None
 
 def process_ocr_result(ocr_result, participant_names):
@@ -48,7 +49,7 @@ def process_ocr_result(ocr_result, participant_names):
             print(f"Skipping centered text: text: '{text}', confidence: {conf}, left: {left}")
             continue
         
-        if conf <= 80:
+        if conf < 80 and conf >= 60:
             with open('user-words-finnish.txt', 'r', encoding='utf-8') as f:
                 user_words = [word.strip() for word in f.readlines()]
             from difflib import SequenceMatcher
@@ -56,7 +57,7 @@ def process_ocr_result(ocr_result, participant_names):
                 return SequenceMatcher(None, a.lower(), b.lower()).ratio()
             closest_match = max(user_words, key=lambda word: optical_similarity(word, text))
             similarity = optical_similarity(closest_match, text)
-            if similarity > 0.3:  # Adjust this threshold as needed
+            if similarity >= 0.5:  # Adjust this threshold as needed
                 print(f"Low confidence word '{text}' (conf: {conf}). Closest optical match: '{closest_match}' (similarity: {similarity:.2f})")
                 text = closest_match
             
@@ -109,8 +110,8 @@ def save_conversation(formatted_conversation, output_file):
         print(f"Error saving conversation: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert WhatsApp screenshot to text")
-    parser.add_argument("image_path", help="Path to the WhatsApp screenshot image")
+    parser = argparse.ArgumentParser(description="Convert WhatsApp screenshot(s) to text")
+    parser.add_argument("image_path", help="Path to the WhatsApp screenshot image or file pattern")
     parser.add_argument("-o", "--output", help="Output file path", default="conversation.txt")
     parser.add_argument("--names", help="Comma-separated participant names", default="")
     args = parser.parse_args()
@@ -120,11 +121,23 @@ def main():
         print("Error: Please provide exactly two participant names or none.")
         return
 
-    ocr_result = perform_ocr(args.image_path)
-    if ocr_result is not None:
-        processed_messages = process_ocr_result(ocr_result, participant_names)
-        formatted_conversation = format_conversation(processed_messages)
+    image_paths = glob.glob(args.image_path)
+    if not image_paths:
+        print(f"No images found matching the pattern: {args.image_path}")
+        return
+
+    all_processed_messages = []
+    for image_path in sorted(image_paths):
+        ocr_result = perform_ocr(image_path)
+        if ocr_result is not None:
+            processed_messages = process_ocr_result(ocr_result, participant_names)
+            all_processed_messages.extend(processed_messages)
+
+    if all_processed_messages:
+        formatted_conversation = format_conversation(all_processed_messages)
         save_conversation(formatted_conversation, args.output)
+    else:
+        print("No messages were processed. Check your input images and OCR settings.")
 
 if __name__ == "__main__":
     main()

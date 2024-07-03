@@ -5,13 +5,13 @@ import pandas as pd
 import re
 import glob
 
-def perform_ocr(image_path):
+def perform_ocr(image_path, lang):
     """Perform OCR on the given image."""
     print(f"\nPerforming OCR on {image_path}")
     try:
         ocr_result = pytesseract.image_to_data(
             Image.open(image_path),
-            config='--psm 6 --oem 3 -l fin --user-words user-words-finnish.txt',
+            config=f"--psm 6 --oem 3 -l {lang} --user-words user-words-finnish.txt",
             output_type=pytesseract.Output.DICT
         )
         df = pd.DataFrame(ocr_result)
@@ -129,7 +129,8 @@ def main():
     parser = argparse.ArgumentParser(description="Convert WhatsApp screenshot(s) to text")
     parser.add_argument("image_path", help="Path to the WhatsApp screenshot image or file pattern")
     parser.add_argument("-o", "--output", help="Output file path", default="conversation.txt")
-    parser.add_argument("--names", help="Comma-separated participant names", default="")
+    parser.add_argument("--names", help="Comma-separated participant names", default="Participant A,Participant B")
+    parser.add_argument("--lang", help="Language code for Tesseract OCR", default="fin")
     args = parser.parse_args()
 
     participant_names = [name.strip() for name in args.names.split(',')] if args.names else []
@@ -144,7 +145,7 @@ def main():
 
     all_processed_messages = []
     for image_path in sorted(image_paths):
-        ocr_result = perform_ocr(image_path)
+        ocr_result = perform_ocr(image_path, args.lang)
         if ocr_result is not None:
             processed_messages = process_ocr_result(ocr_result, participant_names)
             all_processed_messages.extend(processed_messages)

@@ -4,10 +4,12 @@ This Python CLI program converts screenshots of WhatsApp conversations into anno
 
 ## Features
 
-- Process JPG screenshots of WhatsApp conversations
-- Perform OCR using Tesseract with specific parameters
+- Process multiple image formats of WhatsApp conversations
+- Perform OCR using Tesseract
 - Extrapolate message blocks and identify senders
 - Generate an annotated plaintext conversation file
+- Handle low confidence OCR results
+- Support for custom participant names
 
 ## Installation
 
@@ -23,7 +25,7 @@ This project uses [Poetry](https://python-poetry.org/) for dependency management
 Run the program from the command line, providing the path to your WhatsApp screenshot:
 
 ```
-python whatsapp_analyzer.py path/to/your/screenshots
+python whatsapp_analyzer.py path/to/your/screenshots/*
 ```
 
 The program will process the images insude the directory and create a text file containing the extracted and annotated conversations.

@@ -49,8 +49,8 @@ def process_ocr_result(ocr_result, participant_names):
             print(f"Skipping centered text: text: '{text}', confidence: {conf}, left: {left}")
             continue
         
-        if conf < 80 and conf >= 60:
-            text = handle_low_confidence_word(text, conf)
+        # if conf < 80 and conf >= 60:
+        #     text = handle_low_confidence_word(text, conf)
             
         if conf < 60:
             if should_skip_text(text, conf, left):

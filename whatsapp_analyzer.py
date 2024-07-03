@@ -7,6 +7,7 @@ import glob
 
 def perform_ocr(image_path):
     """Perform OCR on the given image."""
+    print(f"\nPerforming OCR on {image_path}")
     try:
         ocr_result = pytesseract.image_to_data(
             Image.open(image_path),

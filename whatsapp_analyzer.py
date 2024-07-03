@@ -1,5 +1,5 @@
 import argparse
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
 import pandas as pd
 import re
@@ -9,8 +9,13 @@ def perform_ocr(image_path, lang):
     """Perform OCR on the given image."""
     print(f"\nPerforming OCR on {image_path}")
     try:
+        preprocessed_image = preprocess_image(image_path)
+        if preprocessed_image is None:
+            print(f"Error preprocessing image {image_path}")
+            return None
+        
         ocr_result = pytesseract.image_to_data(
-            Image.open(image_path),
+            preprocessed_image,
             config=f"--psm 6 --oem 3 -l {lang} --user-words user-words-finnish.txt",
             output_type=pytesseract.Output.DICT
         )
@@ -68,6 +73,25 @@ def process_ocr_result(ocr_result, participant_names):
     add_message()
 
     return processed_messages
+
+
+def preprocess_image(image_path):
+    """Preprocess the image to improve OCR accuracy."""
+    print(f"Preprocessing image: {image_path}")
+    try:
+        img = Image.open(image_path)
+        img = img.convert('L')
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(2.0)
+        img = img.filter(ImageFilter.SHARPEN)
+        enhancer = ImageEnhance.Brightness(img)
+        img = enhancer.enhance(1.1)
+        img = img.point(lambda x: 0 if x < 200 else 255, '1')
+        return img
+    except Exception as e:
+        print(f"Error preprocessing image {image_path}: {e}")
+        return None
+
 
 def handle_low_confidence_word(text, conf):
     with open('user-words-finnish.txt', 'r', encoding='utf-8') as f:
